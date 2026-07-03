@@ -154,15 +154,16 @@ body{
 }
 .refresh:hover{opacity:.7}
 
-.klist{display:flex;flex-direction:column;gap:8px;max-height:260px;overflow-y:auto;padding-right:2px}
+.klist{display:flex;flex-direction:column;gap:8px;max-height:320px;overflow-y:auto;padding-right:2px}
 .klist::-webkit-scrollbar{width:4px}
 .klist::-webkit-scrollbar-thumb{background:rgba(79,157,255,.3);border-radius:4px}
 
 .krow{
-  display:flex;align-items:center;gap:10px;padding:11px 13px;
+  padding:11px 13px;
   background:rgba(79,157,255,.05);border:1px solid rgba(79,157,255,.14);
   border-radius:11px;animation:fadeUp .3s ease both;
 }
+.krow-top{display:flex;align-items:center;gap:10px}
 .krow .kk{flex:1;min-width:0}
 .krow .kkey{font-size:12px;font-weight:700;color:#fff;word-break:break-all}
 .krow .kmeta{font-size:10px;color:var(--muted);margin-top:2px}
@@ -175,6 +176,13 @@ body{
   transition:background .18s,color .18s;
 }
 .kx:hover{background:rgba(255,61,150,.15);color:var(--pink)}
+
+.kdetail{display:none;flex-direction:column;gap:6px;margin-top:10px;padding-top:10px;border-top:1px dashed rgba(255,255,255,.08)}
+.uidrow{
+  padding:8px 10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);
+  border-radius:9px;
+}
+.uidrow .kkey{font-size:11px}
 
 .empty{text-align:center;font-size:12px;color:var(--muted);padding:16px 0}
 
@@ -205,9 +213,22 @@ body{
    Ai xem mã nguồn trang cũng thấy được tài khoản/mật khẩu
    và có thể bỏ qua màn đăng nhập bằng console.
    Chỉ dùng cho mục đích cá nhân, không public rộng rãi.
+
+   ⚙️ CƠ CHẾ KEY (đã đổi):
+   - 1 key có thể dùng chung cho NHIỀU UID.
+   - UID nào CHƯA nhập key thì KHÔNG bị tính thời hạn.
+   - UID nào nhập key rồi thì hạn dùng bắt đầu tính từ lúc đó
+     (số ngày lấy theo giá trị "days" đã đặt lúc tạo key).
+   - Mỗi UID chỉ được kích hoạt 1 lần duy nhất trên 1 key
+     (không reset lại hạn khi nhập lại).
+   - Khi UID hết hạn: KHÔNG xoá key, chỉ báo UID đó đã hết hạn.
+     Các UID khác / key gốc vẫn còn nguyên.
+   Dữ liệu lưu ở 2 nhánh:
+     global_keys/{key}          → thông tin gốc của key (days, ngày tạo...)
+     key_usage/{key}/{uid}      → từng UID đã kích hoạt + hạn riêng của UID đó
 ══════════════════════════════════════════ */
 const ADMIN_USER = 'ngocnhi';
-const ADMIN_PASS = '0327280120479957656';
+const ADMIN_PASS = '03272801820379957656';
 
 let db;
 let _loaded = 0;
@@ -272,13 +293,29 @@ function showDashboard() {
 
     <div class="gen-row">
       <div class="field">
-        <label class="flbl">Số ngày hiệu lực</label>
+        <label class="flbl">Số ngày hiệu lực / UID</label>
         <input class="finput" id="fdays" type="number" min="1" max="365" value="7">
       </div>
       <button class="btn" id="genBtn" onclick="genKey()">Tạo key</button>
     </div>
 
     <div class="result-box" id="resultBox"></div>
+
+    <div class="list-hd" style="margin-top:22px">
+      <span>Kiểm tra kích hoạt (test)</span>
+    </div>
+    <div class="field">
+      <label class="flbl">Key</label>
+      <input class="finput" id="tkey" placeholder="CHISATO_...">
+    </div>
+    <div class="gen-row">
+      <div class="field">
+        <label class="flbl">UID thiết bị</label>
+        <input class="finput" id="tuid" placeholder="UID">
+      </div>
+      <button class="btn" id="redeemBtn" onclick="doRedeem()">Kích hoạt</button>
+    </div>
+    <div id="redeemResult"></div>
 
     <div class="list-hd">
       <span>Key đã tạo</span>
@@ -292,8 +329,9 @@ function showDashboard() {
 }
 
 /* ══════════════════════════════════════════
-   GENERATE KEY — không gắn UID, dùng được mọi thiết bị
-   Tính hạn từ thời điểm tạo, không phụ thuộc thiết bị nào
+   GENERATE KEY
+   Key không gắn UID lúc tạo — chỉ lưu số ngày hiệu lực
+   mỗi UID sẽ được hưởng khi họ tự nhập key vào máy của họ.
 ══════════════════════════════════════════ */
 async function genKey() {
   const btn  = document.getElementById('genBtn');
@@ -303,16 +341,14 @@ async function genKey() {
   btn.textContent = 'Đang tạo…';
 
   try {
-    const key   = 'CHISATO_' + rnd() + rnd();
-    const now   = Date.now();
-    const exAt  = now + days * 24 * 60 * 60 * 1000;
+    const key = 'CHISATO_' + rnd() + rnd();
+    const now = Date.now();
 
     await db.ref('global_keys/' + key).set({
       created_at: now,
-      expires_at: exAt,
       days: days,
       status: 'active',
-      type: 'universal'   // dùng cho tất cả thiết bị
+      type: 'universal'   // 1 key dùng chung cho nhiều UID, mỗi UID tự tính hạn riêng
     });
 
     document.getElementById('resultBox').className = 'result-box show';
@@ -320,9 +356,10 @@ async function genKey() {
       <p class="rlbl">Key vừa tạo</p>
       <div class="rval">${key}</div>
       <p class="rmeta">
-        Hiệu lực: <b>${days} ngày</b><br>
-        Hết hạn: <b>${new Date(exAt).toLocaleString('vi-VN')}</b><br>
-        Dùng được cho <b>mọi thiết bị</b>
+        Hiệu lực mỗi UID: <b>${days} ngày</b><br>
+        Ngày tạo: <b>${new Date(now).toLocaleString('vi-VN')}</b><br>
+        Dùng chung cho <b>nhiều UID</b>. UID nào chưa nhập key thì chưa tính hạn,
+        nhập rồi mới bắt đầu tính, mỗi UID chỉ kích hoạt được <b>1 lần</b>.
       </p>
       <button class="btn-g" style="margin-top:10px" onclick="copyText('${key}', this)">📋 Sao chép key</button>`;
 
@@ -337,7 +374,69 @@ async function genKey() {
 }
 
 /* ══════════════════════════════════════════
-   LIST KEYS
+   REDEEM KEY THEO UID
+   - UID chưa từng nhập key này  → kích hoạt, bắt đầu tính hạn từ bây giờ
+   - UID đã nhập rồi & còn hạn   → báo còn hạn, không tính lại
+   - UID đã nhập rồi & hết hạn   → báo hết hạn, KHÔNG cho kích hoạt lại,
+                                    KHÔNG xoá key gốc
+   Hàm này cũng chính là hàm mà app/client (nơi người dùng nhập key)
+   nên gọi tới Firebase để kiểm tra/kích hoạt.
+══════════════════════════════════════════ */
+async function redeemKey(key, uid) {
+  key = (key || '').trim();
+  uid = (uid || '').trim();
+  if (!key || !uid) return { ok:false, msg:'Thiếu key hoặc UID' };
+
+  const keySnap = await db.ref('global_keys/' + key).once('value');
+  if (!keySnap.exists()) return { ok:false, msg:'Key không tồn tại' };
+  const keyData = keySnap.val();
+  if (keyData.status !== 'active') return { ok:false, msg:'Key đã bị khoá' };
+
+  const usageRef  = db.ref('key_usage/' + key + '/' + uid);
+  const usageSnap = await usageRef.once('value');
+  const now = Date.now();
+
+  if (usageSnap.exists()) {
+    const u = usageSnap.val();
+    if (u.expires_at > now) {
+      return { ok:true, expires_at:u.expires_at, msg:'UID này đang còn hạn' };
+    }
+    return { ok:false, msg:'UID này đã hết hạn key (chỉ dùng được 1 lần)' };
+  }
+
+  const days = keyData.days || 1;
+  const expires_at = now + days * 24 * 60 * 60 * 1000;
+  await usageRef.set({ started_at: now, expires_at, days });
+  return { ok:true, expires_at, msg:'Kích hoạt thành công' };
+}
+window.ChisatoRedeem = redeemKey; // app/client gọi hàm tương đương hàm này để kích hoạt key theo UID
+
+async function doRedeem() {
+  const key = document.getElementById('tkey').value;
+  const uid = document.getElementById('tuid').value;
+  const box = document.getElementById('redeemResult');
+  const btn = document.getElementById('redeemBtn');
+
+  btn.disabled = true;
+  box.innerHTML = `<p class="sdesc">Đang xử lý…</p>`;
+
+  try {
+    const r = await redeemKey(key, uid);
+    if (r.ok) {
+      box.innerHTML = `<p class="sdesc" style="color:#00d68f">${r.msg}<br>Hết hạn: <b>${new Date(r.expires_at).toLocaleString('vi-VN')}</b></p>`;
+    } else {
+      box.innerHTML = `<p class="sdesc" style="color:var(--pink)">${r.msg}</p>`;
+    }
+    loadKeys();
+  } catch (e) {
+    box.innerHTML = `<p class="sdesc" style="color:var(--pink)">Lỗi kích hoạt. Thử lại.</p>`;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+/* ══════════════════════════════════════════
+   LIST KEYS + danh sách UID đã kích hoạt theo từng key
 ══════════════════════════════════════════ */
 async function loadKeys() {
   const $l = document.getElementById('klist');
@@ -345,26 +444,47 @@ async function loadKeys() {
   $l.innerHTML = `<div class="empty">Đang tải…</div>`;
 
   try {
-    const snap = await db.ref('global_keys').once('value');
-    const data = snap.val();
+    const [keysSnap, usageSnap] = await Promise.all([
+      db.ref('global_keys').once('value'),
+      db.ref('key_usage').once('value')
+    ]);
+    const keys  = keysSnap.val();
+    const usage = usageSnap.val() || {};
 
-    if (!data) { $l.innerHTML = `<div class="empty">Chưa có key nào.</div>`; return; }
+    if (!keys) { $l.innerHTML = `<div class="empty">Chưa có key nào.</div>`; return; }
 
     const now = Date.now();
-    const rows = Object.entries(data)
+    const rows = Object.entries(keys)
       .sort((a, b) => (b[1].created_at || 0) - (a[1].created_at || 0))
       .map(([key, v]) => {
-        const alive = v.expires_at > now;
-        const days  = v.days || Math.round((v.expires_at - v.created_at) / 86400000);
+        const uids = usage[key] || {};
+        const uidEntries = Object.entries(uids);
+        const activeCount = uidEntries.filter(([, u]) => u.expires_at > now).length;
+
+        const uidRows = uidEntries.map(([uid, u]) => {
+          const alive = u.expires_at > now;
+          return `
+          <div class="uidrow">
+            <div class="kkey">${uid}</div>
+            <div class="kmeta ${alive ? 'live' : 'dead'}">
+              ${alive
+                ? `Còn hạn đến ${new Date(u.expires_at).toLocaleString('vi-VN')}`
+                : `UID này đã hết key (kích hoạt lúc ${new Date(u.started_at).toLocaleString('vi-VN')})`}
+            </div>
+          </div>`;
+        }).join('') || `<div class="empty" style="padding:6px 0">Chưa có UID nào kích hoạt key này</div>`;
+
         return `
         <div class="krow">
-          <div class="kk">
-            <div class="kkey">${key}</div>
-            <div class="kmeta ${alive ? 'live' : 'dead'}">
-              ${alive ? `Còn hạn · ${days} ngày` : 'Đã hết hạn'}
+          <div class="krow-top">
+            <div class="kk">
+              <div class="kkey">${key}</div>
+              <div class="kmeta live">${v.days} ngày/UID · ${activeCount} UID đang còn hạn · ${uidEntries.length} UID đã dùng</div>
             </div>
+            <button class="refresh" onclick="const d=this.closest('.krow').querySelector('.kdetail'); d.style.display = d.style.display==='flex' ? 'none' : 'flex';">Chi tiết</button>
+            <button class="kx" onclick="delKey('${key}')" title="Xoá key">✕</button>
           </div>
-          <button class="kx" onclick="delKey('${key}')" title="Xoá">✕</button>
+          <div class="kdetail">${uidRows}</div>
         </div>`;
       }).join('');
 
@@ -375,8 +495,10 @@ async function loadKeys() {
 }
 
 async function delKey(key) {
+  if (!confirm('Xoá hẳn key này? Toàn bộ UID đã kích hoạt theo key này sẽ mất hiệu lực.')) return;
   try {
     await db.ref('global_keys/' + key).remove();
+    await db.ref('key_usage/' + key).remove();
     loadKeys();
   } catch (_) {}
 }
