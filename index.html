@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0a0a14">
+<title>Chisato — Admin Panel</title>
+<script async src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js" onload="tryInit()"></script>
+<script async src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js" onload="tryInit()"></script>
+<style>
+:root{
+  --blue:#4f9dff;--blue2:#1a6fff;--pink:#ff6eb4;--pink2:#ff3d96;
+  --bg:#080810;--card:#0f0f1c;--muted:rgba(255,255,255,.38);--r:20px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:var(--bg);color:#fff;
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+  min-height:100svh;display:flex;align-items:center;justify-content:center;
+  overflow-y:auto;padding:20px 0;
+}
+.bg{
+  position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:
+    radial-gradient(ellipse 55% 45% at 15% 20%, rgba(79,157,255,.12) 0%, transparent 65%),
+    radial-gradient(ellipse 45% 40% at 85% 80%, rgba(255,110,180,.10) 0%, transparent 65%);
+}
+.card{
+  position:relative;z-index:1;background:var(--card);
+  border:1px solid rgba(79,157,255,.2);border-radius:var(--r);
+  padding:32px 24px 28px;width:92%;max-width:420px;
+  box-shadow:0 0 0 1px rgba(255,255,255,.04) inset,0 24px 48px rgba(0,0,0,.6);
+  opacity:0;animation:cardIn .5s ease forwards;
+}
+@keyframes cardIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.card::before{content:'';position:absolute;top:0;left:20%;right:20%;height:1px;background:linear-gradient(90deg,transparent,var(--blue),transparent)}
+
+.hd{text-align:center;margin-bottom:20px}
+.hd-icon{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:54px;height:54px;font-size:24px;border-radius:16px;margin-bottom:12px;
+  background:linear-gradient(145deg,rgba(79,157,255,.25),rgba(255,110,180,.15));
+  border:1px solid rgba(79,157,255,.3);
+  animation:popIn .45s cubic-bezier(.34,1.56,.64,1) .15s both;
+}
+@keyframes popIn{from{transform:scale(.5);opacity:0}to{transform:scale(1);opacity:1}}
+.hd-name{
+  font-size:19px;font-weight:900;letter-spacing:3px;text-transform:uppercase;
+  background:linear-gradient(110deg,var(--blue) 0%,var(--pink) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.hd-sub{margin-top:4px;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);font-weight:500}
+
+.sep{height:1px;margin:18px 0;background:linear-gradient(90deg,transparent,rgba(79,157,255,.3),rgba(255,110,180,.3),transparent)}
+
+/* ── FORM ── */
+.field{margin-bottom:14px;animation:fadeUp .35s ease both}
+.field:nth-child(1){animation-delay:.05s}
+.field:nth-child(2){animation-delay:.1s}
+.flbl{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:7px;display:block}
+.finput{
+  width:100%;padding:13px 14px;border-radius:12px;
+  background:rgba(0,0,0,.35);border:1px solid rgba(79,157,255,.2);
+  color:#fff;font-size:14px;outline:none;
+  transition:border-color .18s,background .18s;
+}
+.finput:focus{border-color:rgba(79,157,255,.6);background:rgba(0,0,0,.5)}
+.finput::placeholder{color:rgba(255,255,255,.2)}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* ── BUTTON ── */
+.btn{
+  display:block;width:100%;padding:15px;border:none;border-radius:13px;
+  font-size:13px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;
+  cursor:pointer;position:relative;overflow:hidden;
+  background:linear-gradient(90deg,var(--blue2),var(--pink2));color:#fff;
+  box-shadow:0 4px 20px rgba(79,157,255,.25);
+  transition:transform .18s ease,box-shadow .18s ease,filter .18s ease;
+  margin-top:6px;
+}
+.btn:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(79,157,255,.4);filter:brightness(1.1)}
+.btn:active{transform:translateY(1px);filter:brightness(.95)}
+.btn::after{
+  content:'';position:absolute;top:0;left:-80%;width:50%;height:100%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.15),transparent);
+  transform:skewX(-15deg);transition:left .5s ease;
+}
+.btn:hover::after{left:130%}
+.btn:disabled{opacity:.5;cursor:default;transform:none!important}
+
+.btn-g{
+  display:block;width:100%;padding:12px;margin-top:9px;border-radius:13px;
+  background:transparent;border:1px solid rgba(255,255,255,.1);
+  color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;letter-spacing:.5px;
+  transition:background .18s,border-color .18s,color .18s;
+}
+.btn-g:hover{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.2);color:#fff}
+
+/* ── ERROR MSG ── */
+.err{
+  font-size:12px;color:var(--pink);text-align:center;margin-top:10px;
+  animation:shake .35s ease;
+}
+@keyframes shake{
+  0%,100%{transform:translateX(0)}
+  20%{transform:translateX(-6px)}
+  40%{transform:translateX(6px)}
+  60%{transform:translateX(-4px)}
+  80%{transform:translateX(4px)}
+}
+
+/* ── DENIED STATE ── */
+.state{text-align:center;padding:10px 0 4px}
+.ico{font-size:44px;display:block;margin-bottom:12px;animation:popIn .5s cubic-bezier(.34,1.56,.64,1) both}
+.sttl{font-size:17px;font-weight:800;margin-bottom:8px;color:var(--pink)}
+.sdesc{font-size:13px;color:var(--muted);line-height:1.8}
+.sdesc b{color:rgba(255,255,255,.8)}
+
+/* ── DASHBOARD ── */
+.pill{
+  display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:99px;
+  font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:16px;
+  background:rgba(0,184,124,.12);border:1px solid rgba(0,184,124,.35);color:#00d68f;
+}
+.dot{width:6px;height:6px;border-radius:50%;background:currentColor;animation:blink 1.8s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+
+.gen-row{display:flex;gap:10px;align-items:flex-end;margin-bottom:6px}
+.gen-row .field{flex:1;margin-bottom:0}
+.gen-row .btn{width:auto;padding:13px 18px;margin-top:0;white-space:nowrap}
+
+.result-box{
+  margin-top:16px;background:rgba(0,0,0,.35);border:1px solid rgba(79,157,255,.2);
+  border-radius:14px;padding:16px;display:none;animation:fadeUp .35s ease both;
+}
+.result-box.show{display:block}
+.rlbl{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.rval{
+  font-size:18px;font-weight:900;letter-spacing:1.5px;word-break:break-all;
+  background:linear-gradient(90deg,var(--blue),var(--pink));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  margin-bottom:10px;
+}
+.rmeta{font-size:11px;color:var(--muted);line-height:1.7}
+.rmeta b{color:rgba(255,255,255,.7)}
+
+/* ── KEY LIST ── */
+.list-hd{display:flex;align-items:center;justify-content:space-between;margin:20px 0 10px}
+.list-hd span{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
+.refresh{
+  background:none;border:none;color:var(--blue);font-size:11px;cursor:pointer;
+  font-weight:700;letter-spacing:.5px;transition:opacity .18s;
+}
+.refresh:hover{opacity:.7}
+
+.klist{display:flex;flex-direction:column;gap:8px;max-height:260px;overflow-y:auto;padding-right:2px}
+.klist::-webkit-scrollbar{width:4px}
+.klist::-webkit-scrollbar-thumb{background:rgba(79,157,255,.3);border-radius:4px}
+
+.krow{
+  display:flex;align-items:center;gap:10px;padding:11px 13px;
+  background:rgba(79,157,255,.05);border:1px solid rgba(79,157,255,.14);
+  border-radius:11px;animation:fadeUp .3s ease both;
+}
+.krow .kk{flex:1;min-width:0}
+.krow .kkey{font-size:12px;font-weight:700;color:#fff;word-break:break-all}
+.krow .kmeta{font-size:10px;color:var(--muted);margin-top:2px}
+.krow .kmeta.live{color:#00d68f}
+.krow .kmeta.dead{color:var(--pink)}
+.kx{
+  flex-shrink:0;width:26px;height:26px;border-radius:8px;border:none;cursor:pointer;
+  background:rgba(255,255,255,.06);color:var(--muted);font-size:12px;
+  display:flex;align-items:center;justify-content:center;
+  transition:background .18s,color .18s;
+}
+.kx:hover{background:rgba(255,61,150,.15);color:var(--pink)}
+
+.empty{text-align:center;font-size:12px;color:var(--muted);padding:16px 0}
+
+.ft{margin-top:20px;text-align:center;font-size:10px;color:rgba(255,255,255,.07);letter-spacing:2px;text-transform:uppercase}
+</style>
+</head>
+<body>
+
+<div class="bg" aria-hidden="true"></div>
+
+<div class="card">
+  <div class="hd">
+    <div class="hd-icon">⚙️</div>
+    <div class="hd-name">Chisato Admin</div>
+    <div class="hd-sub">Key Generator</div>
+  </div>
+  <div class="sep"></div>
+  <div id="ct">
+    <div style="text-align:center;padding:20px 0"><p style="color:var(--muted);font-size:12px">Đang tải…</p></div>
+  </div>
+  <div class="ft">Chisato System © 2025</div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════
+   ⚠️ LƯU Ý BẢO MẬT
+   Đây là kiểm tra phía client (trong trình duyệt).
+   Ai xem mã nguồn trang cũng thấy được tài khoản/mật khẩu
+   và có thể bỏ qua màn đăng nhập bằng console.
+   Chỉ dùng cho mục đích cá nhân, không public rộng rãi.
+══════════════════════════════════════════ */
+const ADMIN_USER = 'ngocnhi';
+const ADMIN_PASS = '0327280120479957656';
+
+let db;
+let _loaded = 0;
+function tryInit() {
+  if (++_loaded < 2) return;
+  if (!firebase.apps.length)
+    firebase.initializeApp({ databaseURL: 'https://apikey-b4435-default-rtdb.firebaseio.com/' });
+  db = firebase.database();
+  showLogin();
+}
+
+const $ct = document.getElementById('ct');
+
+/* ══════════════════════════════════════════
+   LOGIN
+══════════════════════════════════════════ */
+function showLogin() {
+  $ct.innerHTML = `
+    <div class="field">
+      <label class="flbl">Tên đăng nhập</label>
+      <input class="finput" id="fu" type="text" placeholder="Nhập tên đăng nhập" autocomplete="off">
+    </div>
+    <div class="field">
+      <label class="flbl">Mật khẩu</label>
+      <input class="finput" id="fp" type="password" placeholder="Nhập mật khẩu" autocomplete="off">
+    </div>
+    <button class="btn" onclick="tryLogin()">Đăng nhập</button>
+    <div id="errBox"></div>`;
+
+  document.getElementById('fp').addEventListener('keydown', e => {
+    if (e.key === 'Enter') tryLogin();
+  });
+}
+
+function tryLogin() {
+  const u = document.getElementById('fu').value.trim();
+  const p = document.getElementById('fp').value;
+
+  if (u === ADMIN_USER && p === ADMIN_PASS) {
+    showDashboard();
+  } else {
+    showDenied();
+  }
+}
+
+function showDenied() {
+  $ct.innerHTML = `
+    <div class="state">
+      <span class="ico">🚫</span>
+      <p class="sttl">Truy cập bị từ chối</p>
+      <p class="sdesc">Tên đăng nhập hoặc mật khẩu<br>không chính xác.</p>
+    </div>
+    <button class="btn-g" onclick="showLogin()">← Thử lại</button>`;
+}
+
+/* ══════════════════════════════════════════
+   DASHBOARD
+══════════════════════════════════════════ */
+function showDashboard() {
+  $ct.innerHTML = `
+    <span class="pill"><span class="dot"></span>Đã đăng nhập</span>
+
+    <div class="gen-row">
+      <div class="field">
+        <label class="flbl">Số ngày hiệu lực</label>
+        <input class="finput" id="fdays" type="number" min="1" max="365" value="7">
+      </div>
+      <button class="btn" id="genBtn" onclick="genKey()">Tạo key</button>
+    </div>
+
+    <div class="result-box" id="resultBox"></div>
+
+    <div class="list-hd">
+      <span>Key đã tạo</span>
+      <button class="refresh" onclick="loadKeys()">↻ Làm mới</button>
+    </div>
+    <div class="klist" id="klist">
+      <div class="empty">Đang tải danh sách…</div>
+    </div>`;
+
+  loadKeys();
+}
+
+/* ══════════════════════════════════════════
+   GENERATE KEY — không gắn UID, dùng được mọi thiết bị
+   Tính hạn từ thời điểm tạo, không phụ thuộc thiết bị nào
+══════════════════════════════════════════ */
+async function genKey() {
+  const btn  = document.getElementById('genBtn');
+  const days = parseInt(document.getElementById('fdays').value, 10) || 7;
+
+  btn.disabled = true;
+  btn.textContent = 'Đang tạo…';
+
+  try {
+    const key   = 'CHISATO_' + rnd() + rnd();
+    const now   = Date.now();
+    const exAt  = now + days * 24 * 60 * 60 * 1000;
+
+    await db.ref('global_keys/' + key).set({
+      created_at: now,
+      expires_at: exAt,
+      days: days,
+      status: 'active',
+      type: 'universal'   // dùng cho tất cả thiết bị
+    });
+
+    document.getElementById('resultBox').className = 'result-box show';
+    document.getElementById('resultBox').innerHTML = `
+      <p class="rlbl">Key vừa tạo</p>
+      <div class="rval">${key}</div>
+      <p class="rmeta">
+        Hiệu lực: <b>${days} ngày</b><br>
+        Hết hạn: <b>${new Date(exAt).toLocaleString('vi-VN')}</b><br>
+        Dùng được cho <b>mọi thiết bị</b>
+      </p>
+      <button class="btn-g" style="margin-top:10px" onclick="copyText('${key}', this)">📋 Sao chép key</button>`;
+
+    loadKeys();
+  } catch (e) {
+    document.getElementById('resultBox').className = 'result-box show';
+    document.getElementById('resultBox').innerHTML = `<p class="sdesc" style="color:var(--pink)">Lỗi tạo key. Thử lại.</p>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Tạo key';
+  }
+}
+
+/* ══════════════════════════════════════════
+   LIST KEYS
+══════════════════════════════════════════ */
+async function loadKeys() {
+  const $l = document.getElementById('klist');
+  if (!$l) return;
+  $l.innerHTML = `<div class="empty">Đang tải…</div>`;
+
+  try {
+    const snap = await db.ref('global_keys').once('value');
+    const data = snap.val();
+
+    if (!data) { $l.innerHTML = `<div class="empty">Chưa có key nào.</div>`; return; }
+
+    const now = Date.now();
+    const rows = Object.entries(data)
+      .sort((a, b) => (b[1].created_at || 0) - (a[1].created_at || 0))
+      .map(([key, v]) => {
+        const alive = v.expires_at > now;
+        const days  = v.days || Math.round((v.expires_at - v.created_at) / 86400000);
+        return `
+        <div class="krow">
+          <div class="kk">
+            <div class="kkey">${key}</div>
+            <div class="kmeta ${alive ? 'live' : 'dead'}">
+              ${alive ? `Còn hạn · ${days} ngày` : 'Đã hết hạn'}
+            </div>
+          </div>
+          <button class="kx" onclick="delKey('${key}')" title="Xoá">✕</button>
+        </div>`;
+      }).join('');
+
+    $l.innerHTML = rows || `<div class="empty">Chưa có key nào.</div>`;
+  } catch (e) {
+    $l.innerHTML = `<div class="empty">Lỗi tải danh sách.</div>`;
+  }
+}
+
+async function delKey(key) {
+  try {
+    await db.ref('global_keys/' + key).remove();
+    loadKeys();
+  } catch (_) {}
+}
+
+/* ══════════════════════════════════════════
+   UTILS
+══════════════════════════════════════════ */
+function rnd() { return Math.random().toString(36).substring(2, 9).toUpperCase(); }
+
+function copyText(text, btn) {
+  const ok = () => {
+    const old = btn.textContent;
+    btn.textContent = '✅ Đã sao chép!';
+    setTimeout(() => { btn.textContent = old; }, 1800);
+  };
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(ok).catch(() => fb(text, ok));
+  } else { fb(text, ok); }
+}
+function fb(text, cb) {
+  const t = Object.assign(document.createElement('textarea'), { value: text, style: 'position:fixed;left:-9999px' });
+  document.body.append(t); t.select();
+  try { document.execCommand('copy'); cb(); } catch (_) {}
+  t.remove();
+}
+</script>
+</body>
+</html>
