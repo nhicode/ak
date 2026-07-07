@@ -108,6 +108,7 @@
     justify-content:center;
     padding:40px 16px;
     position:relative;
+    perspective:1200px;
   }
   .bg-video{
     position:fixed; inset:0; z-index:-2;
@@ -131,20 +132,33 @@
 
   .card{
     width:min(92vw, 420px);
-    background:rgba(255,255,255,.035);
-    border:1px solid rgba(255,255,255,.10);
-    backdrop-filter:blur(6px);
-    -webkit-backdrop-filter:blur(6px);
+    background:rgba(255,255,255,.02);
+    border:1px solid rgba(255,255,255,.08);
+    backdrop-filter:blur(3px);
+    -webkit-backdrop-filter:blur(3px);
     border-radius:26px;
     padding:34px 26px 26px;
     text-align:center;
     box-shadow:0 30px 70px -24px rgba(0,0,0,.65);
     opacity:0;
     position:relative;
+    transform-style:preserve-3d;
+    will-change:transform;
     transform:translateY(18px) scale(.98);
     transition:opacity .7s ease, transform .7s ease;
   }
   .card.in{ opacity:1; transform:translateY(0) scale(1); }
+  .card.tilting{ transition:opacity .7s ease, transform .12s ease-out; }
+
+  .deco-ring{
+    position:absolute;
+    width:52px; height:52px;
+    border-radius:50%;
+    right:16px; bottom:16px;
+    background:radial-gradient(circle at 32% 30%, rgba(255,255,255,.35), rgba(184,173,218,.12) 55%, transparent 72%);
+    border:9px solid rgba(184,173,218,.30);
+    pointer-events:none;
+  }
 
   .deco-star{
     position:absolute;
@@ -159,9 +173,29 @@
   .deco-cat{
     position:absolute;
     font-size:18px;
-    filter:drop-shadow(0 0 4px rgba(255,255,255,.5));
     pointer-events:none;
     will-change:left, top;
+  }
+  .deco-cat .cat-body{
+    display:inline-block;
+    filter:drop-shadow(0 0 4px rgba(255,255,255,.5));
+    animation:catBounce .5s ease-in-out infinite;
+    transform:scaleX(var(--flip, 1));
+  }
+  @keyframes catBounce{
+    0%,100%{ transform:translateY(0) scaleX(var(--flip, 1)); }
+    50%{ transform:translateY(-3px) scaleX(var(--flip, 1)); }
+  }
+  .paw-trail{
+    position:absolute;
+    font-size:9px;
+    opacity:.55;
+    pointer-events:none;
+    animation:pawFade .7s ease-out forwards;
+  }
+  @keyframes pawFade{
+    0%{ opacity:.55; transform:scale(1); }
+    100%{ opacity:0; transform:scale(.6); }
   }
 
   .avatar-wrap{
@@ -363,7 +397,8 @@
     </div>
 
     <div class="deco-star">✦</div>
-    <div class="deco-cat">🐈</div>
+    <div class="deco-cat"><span class="cat-body">🐈</span></div>
+    <div class="deco-ring"></div>
 
     <div class="info-box" id="infoBoxEl"></div>
 
@@ -715,20 +750,37 @@ function renderIconRow(containerId, items, size){
 }
 
 function animateCatAroundBox(catEl, boxEl, speed){
-  speed = speed || 90; // px/s
+  speed = speed || 70; // px/s
+  const bodyEl = catEl.querySelector('.cat-body');
+  const cardEl = catEl.closest('.card');
+  let flip = 1;
+  let lastPawTime = 0;
   function frame(now){
     const x = boxEl.offsetLeft, y = boxEl.offsetTop;
     const w = boxEl.offsetWidth, h = boxEl.offsetHeight;
     const perimeter = 2*(w+h) || 1;
     const t = (now/1000 * speed) % perimeter;
-    let px, py, rotate;
-    if(t < w){ px = x+t; py = y; rotate = 0; }
-    else if(t < w+h){ px = x+w; py = y+(t-w); rotate = 90; }
-    else if(t < w+h+w){ px = x+w-(t-w-h); py = y+h; rotate = 180; }
-    else { px = x; py = y+h-(t-w-h-w); rotate = 270; }
+    let px, py;
+    if(t < w){ px = x+t; py = y; flip = 1; }
+    else if(t < w+h){ px = x+w; py = y+(t-w); }
+    else if(t < w+h+w){ px = x+w-(t-w-h); py = y+h; flip = -1; }
+    else { px = x; py = y+h-(t-w-h-w); }
     catEl.style.left = px+'px';
     catEl.style.top = py+'px';
-    catEl.style.transform = `translate(-50%,-50%) rotate(${rotate}deg)`;
+    catEl.style.transform = 'translate(-50%,-50%)';
+    if(bodyEl) bodyEl.style.setProperty('--flip', flip);
+
+    if(cardEl && now - lastPawTime > 220){
+      lastPawTime = now;
+      const paw = document.createElement('div');
+      paw.className = 'paw-trail';
+      paw.textContent = '🐾';
+      paw.style.left = px+'px';
+      paw.style.top = py+'px';
+      paw.style.transform = `translate(-50%,-50%) scaleX(${flip})`;
+      cardEl.appendChild(paw);
+      setTimeout(()=> paw.remove(), 700);
+    }
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
@@ -770,6 +822,46 @@ requestAnimationFrame(()=>{
   const boxEl = document.getElementById('infoBoxEl');
   if(catEl && boxEl) animateCatAroundBox(catEl, boxEl);
 });
+
+/* ============================================================
+   TƯƠNG TÁC 3D: thẻ nghiêng nhẹ theo vị trí con trỏ / chạm
+============================================================ */
+(function initTilt(){
+  const profileEl = document.getElementById('profile');
+  const cardEl = document.getElementById('card');
+  const maxTilt = 10; // độ
+  let raf = null;
+
+  function applyTilt(clientX, clientY){
+    const rect = cardEl.getBoundingClientRect();
+    const dx = (clientX - (rect.left + rect.width/2)) / (rect.width/2);
+    const dy = (clientY - (rect.top + rect.height/2)) / (rect.height/2);
+    const rotY = Math.max(-1, Math.min(1, dx)) * maxTilt;
+    const rotX = Math.max(-1, Math.min(1, dy)) * -maxTilt;
+    cardEl.classList.add('tilting');
+    if(raf) cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(()=>{
+      cardEl.style.transform = `translateY(0) scale(1.02) rotateX(${rotX}deg) rotateY(${rotY}deg)`;
+    });
+  }
+  function resetTilt(){
+    if(raf) cancelAnimationFrame(raf);
+    cardEl.style.transform = '';
+  }
+
+  profileEl.addEventListener('pointermove', (e)=>{
+    if(!cardEl.classList.contains('in')) return;
+    applyTilt(e.clientX, e.clientY);
+  });
+  profileEl.addEventListener('pointerleave', resetTilt);
+  profileEl.addEventListener('touchmove', (e)=>{
+    if(!cardEl.classList.contains('in')) return;
+    const touch = e.touches[0];
+    if(touch) applyTilt(touch.clientX, touch.clientY);
+  }, { passive:true });
+  profileEl.addEventListener('touchend', resetTilt);
+})();
+
 </script>
 </body>
 </html>
