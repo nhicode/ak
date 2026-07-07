@@ -1,1 +1,656 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Kóc-Coder • Bio</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐸</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --night:#120a24;
+    --night-2:#1b1036;
+    --glass:rgba(255,255,255,.06);
+    --glass-border:rgba(255,255,255,.14);
+    --frost:#9fe8ff;
+    --pink:#ff6fa8;
+    --gold:#ffd76b;
+    --mint:#6be8c9;
+    --text:#f5f1ff;
+    --muted:#b8adda;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%; margin:0;}
+  body{
+    font-family:'Nunito', sans-serif;
+    color:var(--text);
+    background:#000;
+    overflow-x:hidden;
+  }
 
+  /* ============================================================
+     BOOT / TERMINAL SCREEN
+  ============================================================ */
+  #boot{
+    position:fixed; inset:0;
+    background:#000;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:100;
+    transition:opacity .6s ease;
+    cursor:pointer;
+  }
+  #boot.hide{ opacity:0; pointer-events:none; }
+  .term-window{
+    width:min(92vw, 560px);
+    background:#17151f;
+    border-radius:12px;
+    box-shadow:0 30px 70px -20px rgba(0,0,0,.8);
+    overflow:hidden;
+    border:1px solid rgba(255,255,255,.06);
+  }
+  .term-bar{
+    display:flex;
+    gap:7px;
+    padding:10px 12px;
+    background:#1f1c29;
+  }
+  .term-dot{ width:11px; height:11px; border-radius:50%; }
+  .term-dot.r{ background:#ff5f57; }
+  .term-dot.y{ background:#febc2e; }
+  .term-dot.g{ background:#28c840; }
+  .term-body{
+    padding:26px 20px 30px;
+    text-align:center;
+  }
+  #asciiArt{
+    font-family:'JetBrains Mono', monospace;
+    font-size:6.4px;
+    line-height:6.4px;
+    letter-spacing:0;
+    white-space:pre;
+    color:#e9e6f5;
+    display:inline-block;
+    margin:0 auto;
+  }
+  .boot-lines{
+    margin-top:16px;
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    color:var(--muted);
+    min-height:96px;
+  }
+  .boot-line{
+    opacity:0;
+    transform:translateY(4px);
+    transition:opacity .35s ease, transform .35s ease;
+    margin:3px 0;
+  }
+  .boot-line.show{ opacity:1; transform:translateY(0); }
+  .boot-line.prompt{
+    color:var(--gold);
+    font-weight:700;
+    margin-top:10px;
+    animation:blinkPrompt 1.1s step-end infinite;
+  }
+  @keyframes blinkPrompt{ 50%{ opacity:.35; } }
+
+  /* ============================================================
+     PROFILE PAGE
+  ============================================================ */
+  #profile{
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:40px 16px;
+    position:relative;
+  }
+  .bg-video{
+    position:fixed; inset:0; z-index:-2;
+    width:100%; height:100%;
+    object-fit:cover;
+  }
+  .bg-layer{
+    position:fixed; inset:0; z-index:-1;
+    background:
+      radial-gradient(circle at 20% 25%, rgba(255,111,168,.28), transparent 45%),
+      radial-gradient(circle at 80% 20%, rgba(159,232,255,.22), transparent 45%),
+      radial-gradient(circle at 50% 85%, rgba(167,139,250,.26), transparent 50%),
+      linear-gradient(160deg, rgba(18,10,36,.55), rgba(27,16,54,.6));
+    background-size:200% 200%;
+    animation:drift 18s ease-in-out infinite;
+  }
+  @keyframes drift{
+    0%,100%{ background-position:0% 0%; }
+    50%{ background-position:100% 100%; }
+  }
+
+  .card{
+    width:min(92vw, 420px);
+    background:var(--glass);
+    border:1px solid var(--glass-border);
+    backdrop-filter:blur(18px);
+    -webkit-backdrop-filter:blur(18px);
+    border-radius:26px;
+    padding:34px 26px 26px;
+    text-align:center;
+    box-shadow:0 30px 70px -24px rgba(0,0,0,.65);
+    opacity:0;
+    transform:translateY(18px) scale(.98);
+    transition:opacity .7s ease, transform .7s ease;
+  }
+  .card.in{ opacity:1; transform:translateY(0) scale(1); }
+
+  .avatar-wrap{
+    position:relative;
+    width:112px; height:112px;
+    margin:0 auto 16px;
+  }
+  .avatar-ring{
+    position:absolute; inset:-6px;
+    border-radius:50%;
+    background:conic-gradient(from 0deg, var(--frost), var(--pink), var(--gold), var(--mint), var(--frost));
+    animation:spin 6s linear infinite;
+    -webkit-mask:radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
+            mask:radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
+  }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  .avatar{
+    position:absolute; inset:0;
+    border-radius:50%;
+    background:#241a3d;
+    display:flex; align-items:center; justify-content:center;
+    font-size:52px;
+    overflow:hidden;
+  }
+  .avatar img{ width:100%; height:100%; object-fit:cover; }
+  .sparkle{
+    position:absolute;
+    font-size:12px;
+    color:var(--frost);
+    animation:twinkle 2.4s ease-in-out infinite;
+    pointer-events:none;
+  }
+  @keyframes twinkle{
+    0%,100%{ opacity:0; transform:scale(.4) rotate(0deg); }
+    50%{ opacity:1; transform:scale(1) rotate(25deg); }
+  }
+
+  .title-line{
+    font-family:'Baloo 2', sans-serif;
+    font-weight:700;
+    font-size:21px;
+    min-height:28px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:2px;
+    flex-wrap:wrap;
+  }
+  .title-cursor{
+    display:inline-block;
+    width:2px; height:20px;
+    background:var(--frost);
+    margin-left:2px;
+    animation:blinkCursor .9s step-end infinite;
+  }
+  @keyframes blinkCursor{ 50%{ opacity:0; } }
+
+  .badge-row{
+    display:flex;
+    justify-content:center;
+    gap:10px;
+    margin:10px 0 20px;
+  }
+  .badge{
+    width:30px; height:30px;
+    border-radius:50%;
+    background:rgba(255,255,255,.08);
+    display:flex; align-items:center; justify-content:center;
+    font-size:13px;
+  }
+
+  .discord-box{
+    background:rgba(0,0,0,.28);
+    border-radius:16px;
+    padding:14px 16px;
+    text-align:left;
+    margin-bottom:18px;
+  }
+  .discord-user{
+    display:flex; align-items:center; gap:10px;
+    margin-bottom:10px;
+  }
+  .discord-avatar{
+    width:34px; height:34px; border-radius:50%;
+    background:linear-gradient(135deg, var(--pink), var(--frost));
+    display:flex;align-items:center;justify-content:center;
+    font-size:15px;
+    flex-shrink:0;
+    overflow:hidden;
+  }
+  .discord-avatar img{ width:100%; height:100%; object-fit:cover; }
+  .discord-name{ font-weight:800; font-size:14.5px; }
+  .discord-bio{
+    text-align:center;
+    font-size:12.5px;
+    font-style:italic;
+    color:var(--muted);
+    line-height:1.6;
+  }
+
+  .info-box{
+    background:rgba(0,0,0,.22);
+    border-radius:16px;
+    padding:14px 10px;
+    margin-bottom:20px;
+    font-size:13.5px;
+    font-weight:700;
+    line-height:1.75;
+    color:var(--text);
+  }
+  .info-box .muted-line{ color:var(--muted); font-weight:600; }
+
+  .tech-row, .social-row{
+    display:flex;
+    justify-content:center;
+    flex-wrap:wrap;
+    gap:10px;
+  }
+  .tech-row{ margin-bottom:18px; }
+  .tech-icon{
+    width:32px; height:32px;
+    border-radius:9px;
+    background:rgba(255,255,255,.9);
+    display:flex; align-items:center; justify-content:center;
+    padding:5px;
+  }
+  .tech-icon img{ width:100%; height:100%; object-fit:contain; }
+
+  .social-icon{
+    width:38px; height:38px;
+    border-radius:50%;
+    background:rgba(255,255,255,.9);
+    display:flex; align-items:center; justify-content:center;
+    padding:8px;
+    text-decoration:none;
+    transition:transform .15s ease;
+  }
+  .social-icon:active{ transform:scale(.9); }
+  .social-icon img{ width:100%; height:100%; object-fit:contain; }
+
+  .cursor-star{
+    position:fixed;
+    pointer-events:none;
+    font-size:12px;
+    color:var(--frost);
+    z-index:40;
+    animation:starFade .6s ease forwards;
+  }
+  @keyframes starFade{
+    0%{ opacity:1; transform:translate(-50%,-50%) scale(1) rotate(0deg); }
+    100%{ opacity:0; transform:translate(-50%,-50%) scale(.2) rotate(45deg) translateY(-14px); }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ BOOT SCREEN ============ -->
+<div id="boot">
+  <div class="term-window">
+    <div class="term-bar">
+      <div class="term-dot r"></div>
+      <div class="term-dot y"></div>
+      <div class="term-dot g"></div>
+    </div>
+    <div class="term-body">
+      <pre id="asciiArt"></pre>
+      <div class="boot-lines" id="bootLines"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ PROFILE PAGE ============ -->
+<video class="bg-video" autoplay muted loop playsinline>
+  <source src="https://github.com/nhicode/ak/raw/refs/heads/main/YTSave_YouTube_Media_L-w6q7sIC2U_002_720p.mp4" type="video/mp4">
+</video>
+<div class="bg-layer"></div>
+<div id="profile">
+  <div class="card" id="card">
+    <div class="avatar-wrap" id="avatarWrap">
+      <div class="avatar-ring"></div>
+      <div class="avatar" id="avatarEl"></div>
+    </div>
+
+    <div class="title-line"><span id="typedTitle"></span><span class="title-cursor"></span></div>
+
+    <div class="badge-row">
+      <div class="badge">💻</div>
+      <div class="badge">❤️</div>
+      <div class="badge">🎵</div>
+      <div class="badge">✅</div>
+    </div>
+
+    <div class="discord-box">
+      <div class="discord-user">
+        <div class="discord-avatar" id="discordAvatarEl"></div>
+        <div class="discord-name" id="discordNameEl"></div>
+      </div>
+      <div class="discord-bio" id="discordBioEl"></div>
+    </div>
+
+    <div class="info-box" id="infoBoxEl"></div>
+
+    <div class="tech-row" id="techRow"></div>
+    <div class="social-row" id="socialRow"></div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   CẤU HÌNH — chỉnh mọi thông tin cá nhân ở đây
+============================================================ */
+const CONFIG = {
+  avatarEmoji: "🐸",          // dùng để vẽ ASCII lúc boot + làm avatar mặc định
+  avatarImageUrl: "https://raw.githubusercontent.com/nhicode/nhicode/main/0A9C3596-EAD0-46A5-9C28-CCA4D7CB61CC.jpeg",
+
+  titles: [
+    "Anime & Coding lover 💻",
+    "Code. Sleep. Repeat.",
+    "Kóc-Tiến Bắc",
+    "Anime & Coding ❤"
+  ],
+
+  discordUsername: "tienbac2210",
+  discordAvatarUrl: "https://raw.githubusercontent.com/nhicode/nhicode/main/0A9C3596-EAD0-46A5-9C28-CCA4D7CB61CC.jpeg",
+  bioLines: [
+    "Discord: tienbac2210",
+    "Not important enough. How can it get priority!"
+  ],
+
+  realName: "Tiến Bắc",
+  birthYear: "2008",
+  school: "THPT Bình Sơn",
+
+  // slug lấy icon từ simpleicons.org — https://simpleicons.org để tra slug khác
+  techStack: ["mysql", "cplusplus", "python", "html5", "css3", "visualstudiocode"],
+
+  socials: [
+    { icon: "facebook", url: "#" },
+    { icon: "tiktok",    url: "#" },
+    { icon: "google",    url: "#" }
+  ],
+
+  systemLabel: "Windows 11"
+};
+
+/* ============================================================
+   BOOT: ASCII từ emoji + hiệu ứng "giải mã"
+============================================================ */
+function buildAsciiFromEmoji(emoji, cols, rows){
+  const cw = 12, ch = 24;
+  const canvas = document.createElement('canvas');
+  canvas.width = cols*cw; canvas.height = rows*ch;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = `${canvas.height*0.82}px serif`;
+  ctx.fillText(emoji, canvas.width/2, canvas.height/2 + canvas.height*0.03);
+  const data = ctx.getImageData(0,0,canvas.width,canvas.height).data;
+  const ramp = " .:-=+*#%@";
+  const lines = [];
+  for(let r=0;r<rows;r++){
+    let line = '';
+    for(let c=0;c<cols;c++){
+      let total=0, count=0;
+      for(let yy=0; yy<ch; yy+=3){
+        for(let xx=0; xx<cw; xx+=3){
+          const x = c*cw+xx, y = r*ch+yy;
+          const idx = (y*canvas.width + x)*4;
+          total += (data[idx]+data[idx+1]+data[idx+2])/3;
+          count++;
+        }
+      }
+      const avg = total/count;
+      const charIdx = Math.min(ramp.length-1, Math.floor((avg/255)*ramp.length));
+      line += ramp[charIdx];
+    }
+    lines.push(line);
+  }
+  return lines;
+}
+
+function animateAsciiReveal(targetLines, el, duration){
+  return new Promise(resolve=>{
+    const rows = targetLines.length;
+    const cols = targetLines[0].length;
+    const finishTimes = targetLines.map(()=>
+      Array.from({length:cols}, ()=> Math.random()*duration*0.75)
+    );
+    const glitch = "!<>-_\\/[]{}=+*^?#";
+    const start = performance.now();
+    function frame(now){
+      const t = now - start;
+      let out = '';
+      for(let r=0;r<rows;r++){
+        let line = '';
+        for(let c=0;c<cols;c++){
+          const target = targetLines[r][c];
+          if(target === ' '){ line += ' '; continue; }
+          line += (t >= finishTimes[r][c]) ? target : glitch[(Math.random()*glitch.length)|0];
+        }
+        out += line + '\n';
+      }
+      el.textContent = out;
+      if(t < duration){
+        requestAnimationFrame(frame);
+      } else {
+        el.textContent = targetLines.join('\n');
+        resolve();
+      }
+    }
+    requestAnimationFrame(frame);
+  });
+}
+
+function addBootLine(container, text, cls){
+  return new Promise(resolve=>{
+    const div = document.createElement('div');
+    div.className = 'boot-line' + (cls ? ' '+cls : '');
+    div.textContent = text;
+    container.appendChild(div);
+    requestAnimationFrame(()=> div.classList.add('show'));
+    setTimeout(resolve, 260);
+  });
+}
+
+function detectSystem(){
+  const ua = navigator.userAgent;
+  if(/Windows/.test(ua)) return "Windows";
+  if(/Mac OS X/.test(ua)) return /iPhone|iPad|iPod/.test(ua) ? "iOS" : "macOS";
+  if(/Android/.test(ua)) return "Android";
+  if(/Linux/.test(ua)) return "Linux";
+  return "Unknown";
+}
+
+async function runBoot(){
+  const asciiEl = document.getElementById('asciiArt');
+  const linesEl = document.getElementById('bootLines');
+  const ascii = buildAsciiFromEmoji(CONFIG.avatarEmoji, 42, 20);
+
+  await animateAsciiReveal(ascii, asciiEl, 1600);
+
+  await addBootLine(linesEl, "Mở trên web để tránh bị lỗi!");
+
+  let ip = "Không xác định";
+  try{
+    const res = await Promise.race([
+      fetch('https://api.ipify.org?format=json').then(r=>r.json()),
+      new Promise((_,rej)=> setTimeout(()=>rej(), 2500))
+    ]);
+    if(res && res.ip) ip = res.ip;
+  }catch(e){ /* offline hoặc bị chặn — giữ giá trị mặc định */ }
+  await addBootLine(linesEl, `IP: ${ip}`);
+  await addBootLine(linesEl, `System: ${detectSystem()}`);
+  await addBootLine(linesEl, "Bio Loaded");
+  await addBootLine(linesEl, "Press Enter / Click To Continue", "prompt");
+
+  const proceed = ()=>{
+    document.getElementById('boot').classList.add('hide');
+    document.removeEventListener('keydown', onKey);
+    document.getElementById('boot').removeEventListener('click', proceed);
+    setTimeout(showProfile, 500);
+  };
+  const onKey = (e)=>{ if(e.key === 'Enter') proceed(); };
+  document.addEventListener('keydown', onKey);
+  document.getElementById('boot').addEventListener('click', proceed);
+}
+
+/* ============================================================
+   PROFILE: render nội dung từ CONFIG
+============================================================ */
+function renderAvatar(){
+  const el = document.getElementById('avatarEl');
+  if(CONFIG.avatarImageUrl){
+    el.innerHTML = `<img src="${CONFIG.avatarImageUrl}" alt="avatar">`;
+  } else {
+    el.textContent = CONFIG.avatarEmoji;
+  }
+  // sparkle particles quanh avatar
+  const wrap = document.getElementById('avatarWrap');
+  const positions = [
+    {top:'-6px', left:'6px', delay:'0s'},
+    {top:'20px', left:'-10px', delay:'.6s'},
+    {top:'85px', left:'-8px', delay:'1.2s'},
+    {top:'92px', left:'96px', delay:'.3s'},
+    {top:'10px', left:'100px', delay:'.9s'}
+  ];
+  positions.forEach(p=>{
+    const s = document.createElement('div');
+    s.className = 'sparkle';
+    s.textContent = '✦';
+    s.style.top = p.top; s.style.left = p.left; s.style.animationDelay = p.delay;
+    wrap.appendChild(s);
+  });
+}
+
+function renderTypedTitle(){
+  const el = document.getElementById('typedTitle');
+  const titles = CONFIG.titles;
+  let ti = 0;
+
+  function typeOut(text){
+    return new Promise(resolve=>{
+      let i = 0;
+      const iv = setInterval(()=>{
+        el.textContent = text.slice(0, i+1);
+        i++;
+        if(i >= text.length){ clearInterval(iv); resolve(); }
+      }, 55);
+    });
+  }
+  function eraseOut(text){
+    return new Promise(resolve=>{
+      let i = text.length;
+      const iv = setInterval(()=>{
+        el.textContent = text.slice(0, i-1);
+        i--;
+        if(i <= 0){ clearInterval(iv); resolve(); }
+      }, 30);
+    });
+  }
+  async function loop(){
+    while(true){
+      const text = titles[ti % titles.length];
+      await typeOut(text);
+      await new Promise(r=> setTimeout(r, 1400));
+      await eraseOut(text);
+      await new Promise(r=> setTimeout(r, 300));
+      ti++;
+    }
+  }
+  loop();
+}
+
+function renderDiscord(){
+  const avatarEl = document.getElementById('discordAvatarEl');
+  if(CONFIG.discordAvatarUrl){
+    avatarEl.innerHTML = `<img src="${CONFIG.discordAvatarUrl}" alt="discord avatar">`;
+  } else {
+    avatarEl.textContent = CONFIG.discordUsername.charAt(0).toUpperCase();
+  }
+  document.getElementById('discordNameEl').textContent = CONFIG.discordUsername;
+  document.getElementById('discordBioEl').innerHTML = CONFIG.bioLines.join('<br>');
+}
+
+function renderInfo(){
+  document.getElementById('infoBoxEl').innerHTML = `
+    <div>${CONFIG.realName}</div>
+    <div class="muted-line">${CONFIG.birthYear}</div>
+    <div class="muted-line">${CONFIG.school}</div>
+  `;
+}
+
+function renderIconRow(containerId, items, size){
+  const container = document.getElementById(containerId);
+  items.forEach(item=>{
+    const slug = typeof item === 'string' ? item : item.icon;
+    const url = typeof item === 'string' ? null : item.url;
+    const box = url ? document.createElement('a') : document.createElement('div');
+    box.className = containerId === 'techRow' ? 'tech-icon' : 'social-icon';
+    if(url){ box.href = url; box.target = '_blank'; box.rel = 'noopener'; }
+    const img = document.createElement('img');
+    img.src = `https://cdn.simpleicons.org/${slug}`;
+    img.alt = slug;
+    img.onerror = function(){
+      box.innerHTML = '';
+      box.textContent = slug.slice(0,2).toUpperCase();
+      box.style.fontSize = '10px';
+      box.style.fontWeight = '800';
+      box.style.color = '#241a3d';
+    };
+    box.appendChild(img);
+    container.appendChild(box);
+  });
+}
+
+function showProfile(){
+  document.getElementById('card').classList.add('in');
+}
+
+/* ============================================================
+   HIỆU ỨNG SAO THEO CON TRỎ (desktop)
+============================================================ */
+let lastStar = 0;
+document.addEventListener('mousemove', (e)=>{
+  const now = Date.now();
+  if(now - lastStar < 70) return;
+  lastStar = now;
+  const star = document.createElement('div');
+  star.className = 'cursor-star';
+  star.textContent = '✦';
+  star.style.left = e.clientX + 'px';
+  star.style.top = e.clientY + 'px';
+  document.body.appendChild(star);
+  setTimeout(()=> star.remove(), 650);
+});
+
+/* ============================================================
+   INIT
+============================================================ */
+renderAvatar();
+renderTypedTitle();
+renderDiscord();
+renderInfo();
+renderIconRow('techRow', CONFIG.techStack);
+renderIconRow('socialRow', CONFIG.socials);
+runBoot();
+</script>
+</body>
+</html>
