@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Kóc-Coder • Bio</title>
+<title>Chisato • Profile</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐸</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -139,16 +139,37 @@
     border-radius:26px;
     padding:34px 26px 26px;
     text-align:center;
-    box-shadow:0 30px 70px -24px rgba(0,0,0,.65);
+    box-shadow:
+      0 30px 70px -24px rgba(0,0,0,.65),
+      0 0 22px rgba(159,232,255,.20),
+      0 0 46px rgba(255,111,168,.14),
+      inset 0 0 0 1px rgba(255,255,255,.06);
     opacity:0;
     position:relative;
     transform-style:preserve-3d;
     will-change:transform;
     transform:translateY(18px) scale(.98);
-    transition:opacity .7s ease, transform .7s ease;
+    transition:opacity .7s ease, transform .7s ease, box-shadow 2.4s ease-in-out;
+    animation:cardGlow 4.8s ease-in-out infinite;
+  }
+  @keyframes cardGlow{
+    0%,100%{
+      box-shadow:
+        0 30px 70px -24px rgba(0,0,0,.65),
+        0 0 18px rgba(159,232,255,.16),
+        0 0 40px rgba(255,111,168,.10),
+        inset 0 0 0 1px rgba(255,255,255,.06);
+    }
+    50%{
+      box-shadow:
+        0 30px 70px -24px rgba(0,0,0,.65),
+        0 0 30px rgba(159,232,255,.30),
+        0 0 58px rgba(255,111,168,.22),
+        inset 0 0 0 1px rgba(255,255,255,.10);
+    }
   }
   .card.in{ opacity:1; transform:translateY(0) scale(1); }
-  .card.tilting{ transition:opacity .7s ease, transform .12s ease-out; }
+  .card.tilting{ transition:opacity .7s ease, transform .05s linear, box-shadow 2.4s ease-in-out; }
 
   .deco-ring{
     position:absolute;
@@ -426,12 +447,12 @@ const CONFIG = {
   discordAvatarUrl: "https://raw.githubusercontent.com/nhicode/nhicode/main/0A9C3596-EAD0-46A5-9C28-CCA4D7CB61CC.jpeg",
   bioLines: [
     "Discord: chisato2311",
-    "3 acc: Nhi • anhDUCK • MI"
+    "3 xác: Nhi • anhDUCK • MI"
   ],
 
   realName: "Nhi",
   birthYear: "2007",
-  school: "THPT Bình Sơn",
+  school: "Thành phố Hồ Chí Minh",
   country: "中华人民共和国",
 
   // slug lấy icon từ simpleicons.org — https://simpleicons.org để tra slug khác
@@ -829,37 +850,52 @@ requestAnimationFrame(()=>{
 (function initTilt(){
   const profileEl = document.getElementById('profile');
   const cardEl = document.getElementById('card');
-  const maxTilt = 10; // độ
-  let raf = null;
+  const maxTilt = 12; // độ
+  const ease = 0.10; // độ mượt: nhỏ hơn = mượt/chậm hơn
 
-  function applyTilt(clientX, clientY){
+  let targetRotX = 0, targetRotY = 0, targetScale = 1;
+  let curRotX = 0, curRotY = 0, curScale = 1;
+  let looping = false;
+
+  function loop(){
+    curRotX += (targetRotX - curRotX) * ease;
+    curRotY += (targetRotY - curRotY) * ease;
+    curScale += (targetScale - curScale) * ease;
+    cardEl.style.transform = `translateY(0) scale(${curScale}) rotateX(${curRotX.toFixed(2)}deg) rotateY(${curRotY.toFixed(2)}deg)`;
+    const settled = Math.abs(targetRotX-curRotX) < 0.05 && Math.abs(targetRotY-curRotY) < 0.05 &&
+                     Math.abs(targetScale-curScale) < 0.002 && targetRotX===0 && targetRotY===0 && targetScale===1;
+    if(settled){ looping = false; return; }
+    requestAnimationFrame(loop);
+  }
+  function ensureLoop(){
+    if(!looping){ looping = true; requestAnimationFrame(loop); }
+  }
+
+  function setTarget(clientX, clientY){
     const rect = cardEl.getBoundingClientRect();
     const dx = (clientX - (rect.left + rect.width/2)) / (rect.width/2);
     const dy = (clientY - (rect.top + rect.height/2)) / (rect.height/2);
-    const rotY = Math.max(-1, Math.min(1, dx)) * maxTilt;
-    const rotX = Math.max(-1, Math.min(1, dy)) * -maxTilt;
-    cardEl.classList.add('tilting');
-    if(raf) cancelAnimationFrame(raf);
-    raf = requestAnimationFrame(()=>{
-      cardEl.style.transform = `translateY(0) scale(1.02) rotateX(${rotX}deg) rotateY(${rotY}deg)`;
-    });
+    targetRotY = Math.max(-1, Math.min(1, dx)) * maxTilt;
+    targetRotX = Math.max(-1, Math.min(1, dy)) * -maxTilt;
+    targetScale = 1.025;
+    ensureLoop();
   }
-  function resetTilt(){
-    if(raf) cancelAnimationFrame(raf);
-    cardEl.style.transform = '';
+  function resetTarget(){
+    targetRotX = 0; targetRotY = 0; targetScale = 1;
+    ensureLoop();
   }
 
   profileEl.addEventListener('pointermove', (e)=>{
     if(!cardEl.classList.contains('in')) return;
-    applyTilt(e.clientX, e.clientY);
+    setTarget(e.clientX, e.clientY);
   });
-  profileEl.addEventListener('pointerleave', resetTilt);
+  profileEl.addEventListener('pointerleave', resetTarget);
   profileEl.addEventListener('touchmove', (e)=>{
     if(!cardEl.classList.contains('in')) return;
     const touch = e.touches[0];
-    if(touch) applyTilt(touch.clientX, touch.clientY);
+    if(touch) setTarget(touch.clientX, touch.clientY);
   }, { passive:true });
-  profileEl.addEventListener('touchend', resetTilt);
+  profileEl.addEventListener('touchend', resetTarget);
 })();
 
 </script>
