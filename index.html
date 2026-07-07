@@ -480,7 +480,7 @@ const CONFIG = {
   country: "中华人民共和国",
 
   // slug lấy icon từ simpleicons.org — https://simpleicons.org để tra slug khác
-  techStack: ["mysql", "cplusplus", "csharp", "python", "lua", "html5", "css3", "visualstudiocode"],
+  techStack: ["mysql", "cplusplus", "csharp", "python", "lua", "html5", "css", "visualstudiocode"],
 
   socials: [
     { icon: "facebook", url: "#" },
@@ -784,7 +784,15 @@ function renderIconRow(containerId, items, size){
     const img = document.createElement('img');
     img.src = `https://cdn.simpleicons.org/${slug}`;
     img.alt = slug;
+    let triedFallback = false;
     img.onerror = function(){
+      // Thử nguồn CDN dự phòng (jsDelivr) trước khi bỏ cuộc — nhiều trường hợp
+      // "icon bị thiếu" chỉ là do cdn.simpleicons.org bị chặn/lag chứ không phải sai tên icon.
+      if(!triedFallback){
+        triedFallback = true;
+        img.src = `https://cdn.jsdelivr.net/npm/simple-icons@latest/icons/${slug}.svg`;
+        return;
+      }
       box.innerHTML = '';
       box.textContent = slug.slice(0,2).toUpperCase();
       box.style.fontSize = '10px';
