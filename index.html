@@ -20,6 +20,9 @@
     --mint:#6be8c9;
     --text:#f5f1ff;
     --muted:#b8adda;
+    /* Canh vị trí khuôn mặt/đầu trong khung tròn avatar. "center 20%" nghĩa là
+       neo 20% từ trên xuống — tăng % nếu đầu vẫn bị cắt, giảm nếu bị lệch xuống dưới. */
+    --avatar-pos: center 20%;
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
   html,body{height:100%; margin:0;}
@@ -133,7 +136,7 @@
   .card{
     width:min(92vw, 420px);
     background:rgba(255,255,255,.02);
-    border:1px solid rgba(255,255,255,.08);
+    border:1px solid rgba(255,255,255,.22);
     backdrop-filter:blur(3px);
     -webkit-backdrop-filter:blur(3px);
     border-radius:26px;
@@ -141,9 +144,11 @@
     text-align:center;
     box-shadow:
       0 30px 70px -24px rgba(0,0,0,.65),
-      0 0 22px rgba(159,232,255,.20),
-      0 0 46px rgba(255,111,168,.14),
-      inset 0 0 0 1px rgba(255,255,255,.06);
+      0 0 16px rgba(255,255,255,.55),
+      0 0 34px rgba(255,255,255,.30),
+      0 0 30px rgba(159,232,255,.30),
+      0 0 56px rgba(255,111,168,.18),
+      inset 0 0 0 1px rgba(255,255,255,.16);
     opacity:0;
     position:relative;
     transform-style:preserve-3d;
@@ -156,19 +161,25 @@
     0%,100%{
       box-shadow:
         0 30px 70px -24px rgba(0,0,0,.65),
-        0 0 18px rgba(159,232,255,.16),
-        0 0 40px rgba(255,111,168,.10),
-        inset 0 0 0 1px rgba(255,255,255,.06);
+        0 0 14px rgba(255,255,255,.45),
+        0 0 28px rgba(255,255,255,.22),
+        0 0 26px rgba(159,232,255,.22),
+        0 0 48px rgba(255,111,168,.14),
+        inset 0 0 0 1px rgba(255,255,255,.12);
     }
     50%{
       box-shadow:
         0 30px 70px -24px rgba(0,0,0,.65),
-        0 0 30px rgba(159,232,255,.30),
-        0 0 58px rgba(255,111,168,.22),
-        inset 0 0 0 1px rgba(255,255,255,.10);
+        0 0 22px rgba(255,255,255,.75),
+        0 0 46px rgba(255,255,255,.40),
+        0 0 38px rgba(159,232,255,.36),
+        0 0 66px rgba(255,111,168,.24),
+        inset 0 0 0 1px rgba(255,255,255,.22);
     }
   }
   .card.in{ opacity:1; transform:translateY(0) scale(1); }
+  /* Trong lúc đang nghiêng theo con trỏ, transform phải đổi NHANH (linear),
+     nếu không nó sẽ bị kẹt vào transition .7s ở trên và trông như "đứng hình" / lệch. */
   .card.tilting{ transition:opacity .7s ease, transform .05s linear, box-shadow 2.4s ease-in-out; }
 
   .deco-ring{
@@ -223,6 +234,19 @@
     position:relative;
     width:112px; height:112px;
     margin:0 auto 16px;
+    opacity:0;
+    transform:scale(.35) rotate(-18deg);
+    transition:opacity .65s cubic-bezier(.34,1.56,.64,1), transform .75s cubic-bezier(.34,1.56,.64,1);
+    transition-delay:.12s;
+  }
+  .card.in .avatar-wrap{
+    opacity:1;
+    transform:scale(1) rotate(0deg);
+    animation:avatarPulse 2.6s ease-in-out .9s infinite;
+  }
+  @keyframes avatarPulse{
+    0%,100%{ filter:drop-shadow(0 0 0 rgba(255,255,255,0)); }
+    50%{ filter:drop-shadow(0 0 10px rgba(255,255,255,.45)); }
   }
   .avatar-ring{
     position:absolute; inset:-6px;
@@ -241,7 +265,7 @@
     font-size:52px;
     overflow:hidden;
   }
-  .avatar img{ width:100%; height:100%; object-fit:cover; }
+  .avatar img{ width:100%; height:100%; object-fit:cover; object-position:var(--avatar-pos, center 20%); }
   .sparkle{
     position:absolute;
     font-size:12px;
@@ -307,7 +331,7 @@
     flex-shrink:0;
     overflow:hidden;
   }
-  .discord-avatar img{ width:100%; height:100%; object-fit:cover; }
+  .discord-avatar img{ width:100%; height:100%; object-fit:cover; object-position:var(--avatar-pos, center 20%); }
   .discord-name{ font-weight:800; font-size:14.5px; }
   .discord-bio{
     text-align:center;
@@ -584,10 +608,12 @@ function animateAsciiTypewriter(targetLines, el, totalDuration){
     const rows = targetLines.length;
     const cols = targetLines[0].length;
     const totalChars = rows*cols;
-    const perChar = Math.max(0.4, totalDuration/totalChars);
-    let shown = 0;
-    function frame(){
-      shown++;
+    const start = performance.now();
+    function frame(now){
+      const elapsed = now - start;
+      // Bao nhiêu ký tự đáng lẽ đã hiện ra tính theo thời gian trôi qua,
+      // thay vì đặt 1 setTimeout cho từng ký tự (rất nặng máy, gây giật lag cho toàn trang).
+      const shown = Math.min(totalChars, Math.ceil((elapsed/totalDuration) * totalChars));
       let out = '';
       let count = 0;
       for(let r=0;r<rows;r++){
@@ -600,12 +626,12 @@ function animateAsciiTypewriter(targetLines, el, totalDuration){
       }
       el.textContent = out;
       if(shown < totalChars){
-        setTimeout(frame, perChar);
+        requestAnimationFrame(frame);
       } else {
         resolve();
       }
     }
-    frame();
+    requestAnimationFrame(frame);
   });
 }
 
@@ -776,16 +802,26 @@ function animateCatAroundBox(catEl, boxEl, speed){
   const cardEl = catEl.closest('.card');
   let flip = 1;
   let lastPawTime = 0;
+  let dist = 0;        // quãng đường đã đi dọc theo chu vi (px)
+  let lastNow = null;
+
   function frame(now){
+    if(lastNow === null) lastNow = now;
+    // Giới hạn dt tối đa 50ms/khung hình: nếu tab bị đứng khựng (do boot nặng máy...)
+    // mèo sẽ tiếp tục đi mượt từ chỗ cũ thay vì "nhảy cóc" tới vị trí lẽ ra đã tới.
+    const dt = Math.min(50, now - lastNow) / 1000;
+    lastNow = now;
+    dist += dt * speed;
+
     const x = boxEl.offsetLeft, y = boxEl.offsetTop;
     const w = boxEl.offsetWidth, h = boxEl.offsetHeight;
     const perimeter = 2*(w+h) || 1;
-    const t = (now/1000 * speed) % perimeter;
+    const t = dist % perimeter;
     let px, py;
     if(t < w){ px = x+t; py = y; flip = 1; }
-    else if(t < w+h){ px = x+w; py = y+(t-w); }
+    else if(t < w+h){ px = x+w; py = y+(t-w); flip = 1; }
     else if(t < w+h+w){ px = x+w-(t-w-h); py = y+h; flip = -1; }
-    else { px = x; py = y+h-(t-w-h-w); }
+    else { px = x; py = y+h-(t-w-h-w); flip = -1; }
     catEl.style.left = px+'px';
     catEl.style.top = py+'px';
     catEl.style.transform = 'translate(-50%,-50%)';
@@ -864,10 +900,16 @@ requestAnimationFrame(()=>{
     cardEl.style.transform = `translateY(0) scale(${curScale}) rotateX(${curRotX.toFixed(2)}deg) rotateY(${curRotY.toFixed(2)}deg)`;
     const settled = Math.abs(targetRotX-curRotX) < 0.05 && Math.abs(targetRotY-curRotY) < 0.05 &&
                      Math.abs(targetScale-curScale) < 0.002 && targetRotX===0 && targetRotY===0 && targetScale===1;
-    if(settled){ looping = false; return; }
+    if(settled){
+      looping = false;
+      cardEl.style.transform = 'translateY(0) scale(1) rotateX(0deg) rotateY(0deg)';
+      cardEl.classList.remove('tilting'); // về lại transition mượt .7s khi đã đứng yên
+      return;
+    }
     requestAnimationFrame(loop);
   }
   function ensureLoop(){
+    cardEl.classList.add('tilting'); // bắt buộc phải bật class này, nếu không transform sẽ bị transition .7s "nuốt" mất và card trông như bị kẹt/nghiêng cứng
     if(!looping){ looping = true; requestAnimationFrame(loop); }
   }
 
