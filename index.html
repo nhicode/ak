@@ -68,8 +68,8 @@
   }
   #asciiArt{
     font-family:'JetBrains Mono', monospace;
-    font-size:6.4px;
-    line-height:6.4px;
+    font-size:8.5px;
+    line-height:8.5px;
     letter-spacing:0;
     white-space:pre;
     color:#e9e6f5;
@@ -158,16 +158,10 @@
   }
   .deco-cat{
     position:absolute;
-    top:74%;
-    right:22%;
-    font-size:20px;
+    font-size:18px;
     filter:drop-shadow(0 0 4px rgba(255,255,255,.5));
-    animation:floatCat 3s ease-in-out infinite;
     pointer-events:none;
-  }
-  @keyframes floatCat{
-    0%,100%{ transform:translateY(0); }
-    50%{ transform:translateY(-6px); }
+    will-change:left, top;
   }
 
   .avatar-wrap{
@@ -389,23 +383,24 @@ const CONFIG = {
   titles: [
     "Anime & Coding lover 💻",
     "Code. Sleep. Repeat.",
-    "Kóc-Tiến Bắc",
+    "Chisato",
     "Anime & Coding ❤"
   ],
 
-  discordUsername: "tienbac2210",
+  discordUsername: "chisato2311",
   discordAvatarUrl: "https://raw.githubusercontent.com/nhicode/nhicode/main/0A9C3596-EAD0-46A5-9C28-CCA4D7CB61CC.jpeg",
   bioLines: [
-    "Discord: tienbac2210",
-    "Not important enough. How can it get priority!"
+    "Discord: chisato2311",
+    "3 acc: Nhi • anhDUCK • MI"
   ],
 
-  realName: "Tiến Bắc",
-  birthYear: "2008",
+  realName: "Nhi",
+  birthYear: "2007",
   school: "THPT Bình Sơn",
+  country: "中华人民共和国",
 
   // slug lấy icon từ simpleicons.org — https://simpleicons.org để tra slug khác
-  techStack: ["mysql", "cplusplus", "python", "html5", "css3", "visualstudiocode"],
+  techStack: ["mysql", "cplusplus", "csharp", "python", "lua", "html5", "css3", "visualstudiocode"],
 
   socials: [
     { icon: "facebook", url: "#" },
@@ -454,6 +449,47 @@ function buildAsciiFromEmoji(emoji, cols, rows){
   return lines;
 }
 
+function buildAsciiFromImage(imgUrl, cols, rows){
+  return new Promise((resolve, reject)=>{
+    const cw = 8, ch = 16;
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = ()=>{
+      const canvas = document.createElement('canvas');
+      canvas.width = cols*cw; canvas.height = rows*ch;
+      const ctx = canvas.getContext('2d');
+      // crop ảnh thành hình vuông ở giữa rồi vẽ full khung để nét hơn
+      const side = Math.min(img.naturalWidth, img.naturalHeight);
+      const sx = (img.naturalWidth - side)/2, sy = (img.naturalHeight - side)/2;
+      ctx.drawImage(img, sx, sy, side, side, 0, 0, canvas.width, canvas.height);
+      const data = ctx.getImageData(0,0,canvas.width,canvas.height).data;
+      const ramp = " .:-=+*#%@";
+      const lines = [];
+      for(let r=0;r<rows;r++){
+        let line = '';
+        for(let c=0;c<cols;c++){
+          let total=0, count=0;
+          for(let yy=0; yy<ch; yy+=2){
+            for(let xx=0; xx<cw; xx+=2){
+              const x = c*cw+xx, y = r*ch+yy;
+              const idx = (y*canvas.width + x)*4;
+              total += (data[idx]+data[idx+1]+data[idx+2])/3;
+              count++;
+            }
+          }
+          const avg = total/count;
+          const charIdx = Math.min(ramp.length-1, Math.floor((avg/255)*ramp.length));
+          line += ramp[charIdx];
+        }
+        lines.push(line);
+      }
+      resolve(lines);
+    };
+    img.onerror = reject;
+    img.src = imgUrl;
+  });
+}
+
 function animateAsciiReveal(targetLines, el, duration){
   return new Promise(resolve=>{
     const rows = targetLines.length;
@@ -487,6 +523,36 @@ function animateAsciiReveal(targetLines, el, duration){
   });
 }
 
+function animateAsciiTypewriter(targetLines, el, totalDuration){
+  return new Promise(resolve=>{
+    const rows = targetLines.length;
+    const cols = targetLines[0].length;
+    const totalChars = rows*cols;
+    const perChar = Math.max(0.4, totalDuration/totalChars);
+    let shown = 0;
+    function frame(){
+      shown++;
+      let out = '';
+      let count = 0;
+      for(let r=0;r<rows;r++){
+        let line = '';
+        for(let c=0;c<cols;c++){
+          line += (count < shown) ? targetLines[r][c] : ' ';
+          count++;
+        }
+        out += line + '\n';
+      }
+      el.textContent = out;
+      if(shown < totalChars){
+        setTimeout(frame, perChar);
+      } else {
+        resolve();
+      }
+    }
+    frame();
+  });
+}
+
 function addBootLine(container, text, cls){
   return new Promise(resolve=>{
     const div = document.createElement('div');
@@ -510,23 +576,16 @@ function detectSystem(){
 async function runBoot(){
   const asciiEl = document.getElementById('asciiArt');
   const linesEl = document.getElementById('bootLines');
-  const ascii = buildAsciiFromEmoji(CONFIG.avatarEmoji, 42, 20);
 
-  await animateAsciiReveal(ascii, asciiEl, 1600);
-
-  await addBootLine(linesEl, "Mở trên web để tránh bị lỗi!");
-
-  let ip = "Không xác định";
+  let ascii;
   try{
-    const res = await Promise.race([
-      fetch('https://api.ipify.org?format=json').then(r=>r.json()),
-      new Promise((_,rej)=> setTimeout(()=>rej(), 2500))
-    ]);
-    if(res && res.ip) ip = res.ip;
-  }catch(e){ /* offline hoặc bị chặn — giữ giá trị mặc định */ }
-  await addBootLine(linesEl, `IP: ${ip}`);
-  await addBootLine(linesEl, `System: ${detectSystem()}`);
-  await addBootLine(linesEl, "Bio Loaded");
+    ascii = await buildAsciiFromImage(CONFIG.avatarImageUrl || CONFIG.discordAvatarUrl, 64, 32);
+  }catch(e){
+    ascii = buildAsciiFromEmoji(CONFIG.avatarEmoji, 42, 20);
+  }
+
+  await animateAsciiTypewriter(ascii, asciiEl, 500);
+
   await addBootLine(linesEl, "Press Enter / Click To Continue", "prompt");
 
   const proceed = ()=>{
@@ -628,6 +687,7 @@ function renderInfo(){
     <div>${CONFIG.realName}</div>
     <div class="muted-line">${CONFIG.birthYear}</div>
     <div class="muted-line">${CONFIG.school}</div>
+    ${CONFIG.country ? `<div class="muted-line">${CONFIG.country}</div>` : ''}
   `;
 }
 
@@ -652,6 +712,26 @@ function renderIconRow(containerId, items, size){
     box.appendChild(img);
     container.appendChild(box);
   });
+}
+
+function animateCatAroundBox(catEl, boxEl, speed){
+  speed = speed || 90; // px/s
+  function frame(now){
+    const x = boxEl.offsetLeft, y = boxEl.offsetTop;
+    const w = boxEl.offsetWidth, h = boxEl.offsetHeight;
+    const perimeter = 2*(w+h) || 1;
+    const t = (now/1000 * speed) % perimeter;
+    let px, py, rotate;
+    if(t < w){ px = x+t; py = y; rotate = 0; }
+    else if(t < w+h){ px = x+w; py = y+(t-w); rotate = 90; }
+    else if(t < w+h+w){ px = x+w-(t-w-h); py = y+h; rotate = 180; }
+    else { px = x; py = y+h-(t-w-h-w); rotate = 270; }
+    catEl.style.left = px+'px';
+    catEl.style.top = py+'px';
+    catEl.style.transform = `translate(-50%,-50%) rotate(${rotate}deg)`;
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
 }
 
 function showProfile(){
@@ -685,6 +765,11 @@ renderInfo();
 renderIconRow('techRow', CONFIG.techStack);
 renderIconRow('socialRow', CONFIG.socials);
 runBoot();
+requestAnimationFrame(()=>{
+  const catEl = document.querySelector('.deco-cat');
+  const boxEl = document.getElementById('infoBoxEl');
+  if(catEl && boxEl) animateCatAroundBox(catEl, boxEl);
+});
 </script>
 </body>
 </html>
