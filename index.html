@@ -131,19 +131,44 @@
 
   .card{
     width:min(92vw, 420px);
-    background:var(--glass);
-    border:1px solid var(--glass-border);
-    backdrop-filter:blur(18px);
-    -webkit-backdrop-filter:blur(18px);
+    background:rgba(255,255,255,.035);
+    border:1px solid rgba(255,255,255,.10);
+    backdrop-filter:blur(6px);
+    -webkit-backdrop-filter:blur(6px);
     border-radius:26px;
     padding:34px 26px 26px;
     text-align:center;
     box-shadow:0 30px 70px -24px rgba(0,0,0,.65);
     opacity:0;
+    position:relative;
     transform:translateY(18px) scale(.98);
     transition:opacity .7s ease, transform .7s ease;
   }
   .card.in{ opacity:1; transform:translateY(0) scale(1); }
+
+  .deco-star{
+    position:absolute;
+    top:60%;
+    right:-4px;
+    font-size:22px;
+    color:#fff;
+    text-shadow:0 0 10px rgba(255,255,255,.6);
+    animation:twinkle 2.4s ease-in-out infinite;
+    pointer-events:none;
+  }
+  .deco-cat{
+    position:absolute;
+    top:74%;
+    right:22%;
+    font-size:20px;
+    filter:drop-shadow(0 0 4px rgba(255,255,255,.5));
+    animation:floatCat 3s ease-in-out infinite;
+    pointer-events:none;
+  }
+  @keyframes floatCat{
+    0%,100%{ transform:translateY(0); }
+    50%{ transform:translateY(-6px); }
+  }
 
   .avatar-wrap{
     position:relative;
@@ -343,6 +368,9 @@
       <div class="discord-bio" id="discordBioEl"></div>
     </div>
 
+    <div class="deco-star">✦</div>
+    <div class="deco-cat">🐈</div>
+
     <div class="info-box" id="infoBoxEl"></div>
 
     <div class="tech-row" id="techRow"></div>
@@ -505,6 +533,12 @@ async function runBoot(){
     document.getElementById('boot').classList.add('hide');
     document.removeEventListener('keydown', onKey);
     document.getElementById('boot').removeEventListener('click', proceed);
+    const bgVideo = document.querySelector('.bg-video');
+    if(bgVideo){
+      bgVideo.muted = false;
+      bgVideo.volume = 0.5;
+      bgVideo.play().catch(()=>{ /* nếu trình duyệt vẫn chặn, giữ im lặng */ });
+    }
     setTimeout(showProfile, 500);
   };
   const onKey = (e)=>{ if(e.key === 'Enter') proceed(); };
