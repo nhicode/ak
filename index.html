@@ -3,38 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Pet chạy trên màn hình</title>
-    <style>
-        /* Trang trí giao diện đơn giản */
-        body {
-            background-color: #282a36; /* Màu nền tối */
-            color: #f8f8f2;
-            font-family: Arial, sans-serif;
-            height: 100vh;
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden; /* Tránh xuất hiện thanh cuộn */
-        }
-        .box {
-            background-color: rgba(255, 255, 255, 0.1);
-            padding: 20px;
-            border-radius: 10px;
-            text-align: center;
-        }
-    </style>
+    <title>My Web Pet</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <div class="box">
-        <h2>Xin chào! 🐾</h2>
-        <p>Hãy chạm (tap) ngón tay vào bất kỳ đâu trên màn hình.</p>
-        <p>Thú cưng sẽ chạy đến chỗ bạn!</p>
+    <div class="container">
+        <h1>Hello World! 🐾</h1>
+        <p>Di chuyển chuột hoặc chạm vào màn hình để gọi thú cưng.</p>
+        <div class="tech-stack">
+            <span>HTML5</span>
+            <span>CSS3</span>
+            <span>JavaScript</span>
+        </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/gh/adryd325/oneko.js/oneko.js"></script>
-
+    <script src="oneko.js"></script>
 </body>
 </html>
